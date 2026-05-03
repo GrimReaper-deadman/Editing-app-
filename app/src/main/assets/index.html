@@ -1,0 +1,633 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>FluxForge · Auto Edit & Web Clip Studio</title>
+    <style>
+        :root {
+            --primary: #3b82f6;
+            --primary-hover: #2563eb;
+            --secondary: #475569;
+            --secondary-hover: #334155;
+            --accent: #8b5cf6;
+            --accent-hover: #7c3aed;
+            --warning: #ea580c;
+            --warning-hover: #c2410c;
+            --bg-dark: #1e2933;
+            --canvas-bg: #0f1720;
+            --text-main: #1a2a3a;
+            --text-sub: #4a627a;
+        }
+
+        * {
+            box-sizing: border-box;
+            font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            background: linear-gradient(145deg, #f0f2f8 0%, #e6e9f0 100%);
+            margin: 0;
+            min-height: 100vh;
+            padding: 1rem;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            overflow-x: hidden;
+        }
+
+        .app-container {
+            max-width: 1200px;
+            width: 100%;
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(10px);
+            border-radius: 2rem;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            padding: 1.5rem;
+            margin: 0 auto;
+        }
+
+        header {
+            margin-bottom: 1.5rem;
+            border-bottom: 1px solid rgba(0,0,0,0.05);
+            padding-bottom: 1rem;
+        }
+
+        h1 {
+            font-size: 1.75rem;
+            font-weight: 800;
+            background: linear-gradient(135deg, #1e2933, #3b82f6);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            margin: 0;
+            letter-spacing: -0.5px;
+            text-transform: uppercase;
+        }
+
+        .sub {
+            color: var(--text-sub);
+            font-size: 0.9rem;
+            margin-top: 0.25rem;
+            font-weight: 500;
+        }
+
+        .dual-panel {
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+
+        @media (min-width: 1024px) {
+            .dual-panel { flex-direction: row; }
+        }
+
+        /* control panel */
+        .control-panel {
+            flex: 1;
+            background: white;
+            border-radius: 1.5rem;
+            padding: 1.25rem;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
+        }
+
+        .section-title {
+            font-size: 0.85rem;
+            font-weight: 700;
+            color: var(--text-sub);
+            margin-bottom: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .button-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            gap: 0.75rem;
+            margin-bottom: 1.5rem;
+        }
+
+        button, .file-label {
+            height: 48px;
+            border: none;
+            padding: 0 1rem;
+            border-radius: 12px;
+            font-weight: 600;
+            font-size: 0.9rem;
+            color: white;
+            cursor: pointer;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+            width: 100%;
+            text-align: center;
+        }
+
+        button:active, .file-label:active {
+            transform: scale(0.96);
+        }
+
+        button.primary { background: var(--primary); }
+        button.primary:hover { background: var(--primary-hover); }
+        
+        button.secondary, .file-label { background: var(--secondary); }
+        button.secondary:hover, .file-label:hover { background: var(--secondary-hover); }
+
+        button.accent { background: var(--accent); }
+        button.accent:hover { background: var(--accent-hover); }
+
+        button.warning { background: var(--warning); }
+        button.warning:hover { background: var(--warning-hover); }
+
+        input[type="file"] { display: none; }
+
+        .search-section {
+            margin-top: 1rem;
+            padding-top: 1rem;
+            border-top: 1px solid rgba(0,0,0,0.05);
+        }
+
+        .search-form {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .search-row {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .search-row input {
+            flex: 1;
+            height: 48px;
+            padding: 0 1rem;
+            border-radius: 12px;
+            border: 2px solid #e2e8f0;
+            background: #f8fafc;
+            font-size: 1rem;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+
+        .search-row input:focus { border-color: var(--primary); background: white; }
+
+        .clips-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+            gap: 0.5rem;
+            max-height: 240px;
+            overflow-y: auto;
+            padding: 4px;
+            background: #f1f5f9;
+            border-radius: 12px;
+        }
+
+        .clip-item {
+            background: white;
+            border-radius: 8px;
+            overflow: hidden;
+            cursor: pointer;
+            aspect-ratio: 1;
+            border: 2px solid transparent;
+            transition: 0.2s;
+        }
+
+        .clip-item:active { transform: scale(0.92); }
+        .clip-item.active { border-color: var(--primary); }
+        .clip-item img { width: 100%; height: 100%; object-fit: cover; }
+
+        /* Preview area */
+        .edit-area {
+            flex: 1.4;
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .canvas-container {
+            background: var(--bg-dark);
+            border-radius: 1.5rem;
+            padding: 12px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 300px;
+        }
+
+        canvas {
+            max-width: 100%;
+            max-height: 70vh;
+            border-radius: 8px;
+            background: var(--canvas-bg);
+            display: block;
+        }
+
+        .status-bar {
+            background: #e0f2fe;
+            color: #0369a1;
+            padding: 0.75rem 1rem;
+            border-radius: 12px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .status-bar.error { background: #fee2e2; color: #b91c1c; }
+        .status-bar.loading { background: #fef3c7; color: #92400e; }
+
+        footer {
+            margin-top: 1.5rem;
+            text-align: center;
+            font-size: 0.75rem;
+            color: var(--text-sub);
+            opacity: 0.8;
+        }
+
+        /* Loading Overlay */
+        #processingOverlay {
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(15, 23, 32, 0.7);
+            display: none;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            color: white;
+            z-index: 10;
+            backdrop-filter: blur(4px);
+        }
+
+        .spinner {
+            width: 40px; height: 40px;
+            border: 4px solid rgba(255,255,255,0.1);
+            border-left-color: var(--primary);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-bottom: 12px;
+        }
+
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        @media (max-width: 640px) {
+            .app-container { padding: 1rem; border-radius: 1.5rem; }
+            h1 { font-size: 1.5rem; }
+            .button-grid { grid-template-columns: 1fr 1fr; }
+        }
+    </style>
+</head>
+<body>
+<div class="app-container">
+    <header>
+        <h1>✨ FluxForge Pro</h1>
+        <div class="sub">AI Enhancement • Web Clip Studio • Ultra-Res Editing</div>
+    </header>
+
+    <div class="dual-panel">
+        <!-- LEFT: Controls -->
+        <div class="control-panel">
+            <div class="section-title">🛠️ Image Controls</div>
+            <div class="button-grid">
+                <label for="fileUpload" class="file-label">
+                    <span>📁 Upload Image</span>
+                    <input type="file" id="fileUpload" accept="image/*">
+                </label>
+                <button id="resetBtn" class="secondary">↺ Reset Original</button>
+                <button id="autoEditBtn" class="primary">✨ Auto Edit</button>
+                <button id="downloadBtn" class="accent">⬇️ Save Image</button>
+            </div>
+
+            <div class="search-section">
+                <div class="section-title">🌐 Web Clip Search (GIPHY)</div>
+                <form id="searchForm" class="search-form" onsubmit="return false;">
+                    <div class="search-row">
+                        <input type="text" id="searchQuery" placeholder="Search: neon city, abstract..." value="cyberpunk">
+                        <button type="submit" id="searchClipsBtn" class="secondary" style="width: auto; padding: 0 1.5rem;">🔍</button>
+                    </div>
+                    <button type="button" id="randomClipBtn" class="warning">🎲 Random Trending</button>
+                </form>
+                <div id="clipsContainer" class="clips-grid">
+                    <!-- Clips loaded dynamically -->
+                </div>
+            </div>
+            
+            <div style="margin-top: 1.5rem; font-size: 0.75rem; color: var(--text-sub); line-height: 1.4;">
+                <strong>Pro Tip:</strong> Auto Edit uses advanced histogram stretching + white balance correction.
+            </div>
+        </div>
+
+        <!-- RIGHT: Preview -->
+        <div class="edit-area">
+            <div class="canvas-container">
+                <canvas id="mainCanvas"></canvas>
+                <div id="processingOverlay">
+                    <div class="spinner"></div>
+                    <div style="font-weight: bold; letter-spacing: 1px;">PROCESSING...</div>
+                </div>
+            </div>
+            <div class="status-bar" id="infoMsg">
+                <span>✨ Ready to work</span>
+            </div>
+        </div>
+    </div>
+    <footer>Powered by FluxForge AI Engine • Clips from GIPHY</footer>
+</div>
+
+<script>
+    // ---------- GLOBAL ERROR HANDLING ----------
+    window.onerror = function(msg, url, lineNo, columnNo, error) {
+        const message = document.getElementById('infoMsg');
+        if (message) message.innerText = "❌ Error: " + msg + " (line " + lineNo + ")";
+        return false;
+    };
+    window.onunhandledrejection = function(event) {
+        const message = document.getElementById('infoMsg');
+        if (message) message.innerText = "❌ Async Error: " + event.reason;
+    };
+
+    // ---------- GLOBALS ----------
+    const canvas = document.getElementById('mainCanvas');
+    const ctx = canvas.getContext('2d');
+    const infoMsg = document.getElementById('infoMsg');
+    const overlay = document.getElementById('processingOverlay');
+
+    let originalImage = null;
+    let currentImage = null;
+    let isImageLoaded = false;
+
+    function showProcessing(show) {
+        overlay.style.display = show ? 'flex' : 'none';
+        infoMsg.classList.toggle('loading', show);
+    }
+
+    function updateStatus(msg, type = 'info') {
+        infoMsg.innerText = msg;
+        infoMsg.className = 'status-bar ' + (type === 'error' ? 'error' : (type === 'loading' ? 'loading' : ''));
+    }
+
+    function drawCurrentImageOnCanvas() {
+        if (!currentImage || !currentImage.complete) return;
+        
+        const container = canvas.parentElement;
+        const contW = container.clientWidth - 24; // padding
+        const contH = container.clientHeight - 24;
+        
+        const imgW = currentImage.naturalWidth;
+        const imgH = currentImage.naturalHeight;
+        
+        const ratio = Math.min(contW / imgW, contH / imgH, 1);
+        
+        canvas.width = imgW * ratio;
+        canvas.height = imgH * ratio;
+        
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.drawImage(currentImage, 0, 0, canvas.width, canvas.height);
+    }
+
+    function finalizeImageLoad(imgEl) {
+        originalImage = imgEl;
+        currentImage = cloneImage(imgEl);
+        isImageLoaded = true;
+        drawCurrentImageOnCanvas();
+        updateStatus(`✓ Loaded: ${imgEl.naturalWidth}x${imgEl.naturalHeight}`);
+    }
+
+    function cloneImage(img) {
+        const newImg = new Image();
+        newImg.crossOrigin = "Anonymous";
+        newImg.src = img.src;
+        return newImg;
+    }
+
+    function loadImageFromUrl(url) {
+        updateStatus('⏳ Fetching web clip...', 'loading');
+        const img = new Image();
+        img.crossOrigin = "Anonymous";
+        img.onload = () => finalizeImageLoad(img);
+        img.onerror = () => updateStatus('❌ Failed to load image. CORS restriction?', 'error');
+        img.src = url;
+    }
+
+    // --- AI AUTO EDIT CORE (Optimized with scaling) ---
+    async function autoEnhanceImage(fullImage) {
+        return new Promise((resolve, reject) => {
+            if (!fullImage || !fullImage.complete) return reject("Invalid image");
+            
+            const MAX_DIM = 1600; // Limit for performance/stability
+            let w = fullImage.naturalWidth;
+            let h = fullImage.naturalHeight;
+            
+            if (w > MAX_DIM || h > MAX_DIM) {
+                const scale = MAX_DIM / Math.max(w, h);
+                w = Math.round(w * scale);
+                h = Math.round(h * scale);
+            }
+
+            const offCanvas = document.createElement('canvas');
+            offCanvas.width = w;
+            offCanvas.height = h;
+            const offCtx = offCanvas.getContext('2d');
+            offCtx.drawImage(fullImage, 0, 0, w, h);
+            
+            let imgData = offCtx.getImageData(0, 0, w, h);
+            const data = imgData.data;
+            const len = data.length;
+
+            // 1. Histogram Bounds (Auto-Levels)
+            function getBounds(offset) {
+                const hist = new Uint32Array(256);
+                for (let i = offset; i < len; i += 4) hist[data[i]]++;
+                
+                const total = len / 4;
+                const clip = total * 0.005;
+                let low = 0, high = 255, acc = 0;
+                
+                for (let v = 0; v < 256; v++) {
+                    acc += hist[v];
+                    if (acc > clip) { low = v; break; }
+                }
+                acc = 0;
+                for (let v = 255; v >= 0; v--) {
+                    acc += hist[v];
+                    if (acc > clip) { high = v; break; }
+                }
+                return { low, range: (high - low) || 1 };
+            }
+
+            const rB = getBounds(0), gB = getBounds(1), bB = getBounds(2);
+
+            // 2. White Balance (Gray World)
+            let sR = 0, sG = 0, sB = 0;
+            for (let i = 0; i < len; i += 4) {
+                sR += data[i]; sG += data[i+1]; sB += data[i+2];
+            }
+            const count = len / 4;
+            const avgR = sR / count, avgG = sG / count, avgB = sB / count;
+            const gray = (avgR + avgG + avgB) / 3;
+            const gR = gray / avgR, gG = gray / avgG, gB_ = gray / avgB;
+
+            // 3. Pixel Transform
+            for (let i = 0; i < len; i += 4) {
+                // Levels + White Balance
+                let r = ((data[i] - rB.low) / rB.range * 255) * gR;
+                let g = ((data[i+1] - gB.low) / gB.range * 255) * gG;
+                let b = ((data[i+2] - bB.low) / bB.range * 255) * gB_;
+
+                // Saturation (+15%)
+                const lum = 0.299 * r + 0.587 * g + 0.114 * b;
+                data[i] = Math.max(0, Math.min(255, lum + (r - lum) * 1.15));
+                data[i+1] = Math.max(0, Math.min(255, lum + (g - lum) * 1.15));
+                data[i+2] = Math.max(0, Math.min(255, lum + (b - lum) * 1.15));
+            }
+
+            offCtx.putImageData(imgData, 0, 0);
+            const res = new Image();
+            res.onload = () => resolve(res);
+            res.onerror = () => reject("Encoding error");
+            res.src = offCanvas.toDataURL('image/png');
+        });
+    }
+
+    async function applyAutoEditToCurrent() {
+        if (!isImageLoaded || !currentImage || !currentImage.complete) {
+            updateStatus('⚠️ Please upload or select a clip first.', 'error');
+            return;
+        }
+        showProcessing(true);
+        updateStatus('✨ Applying AI Enhancements...', 'loading');
+        
+        try {
+            const enhanced = await autoEnhanceImage(currentImage);
+            currentImage = enhanced;
+            drawCurrentImageOnCanvas();
+            updateStatus('✔️ AI Edit Applied! (Levels + WB + Saturation)');
+        } catch (err) {
+            console.error(err);
+            updateStatus('❌ AI Processing failed.', 'error');
+        } finally {
+            showProcessing(false);
+        }
+    }
+
+    function resetToOriginal() {
+        if (!originalImage) return;
+        currentImage = cloneImage(originalImage);
+        drawCurrentImageOnCanvas();
+        updateStatus('↺ Reset to original image.');
+    }
+
+    // --- GIPHY CLIPS ---
+    const GIPHY_API_KEY = 'dc6zaTOxFJmzC'; 
+    const GIPHY_ENDPOINT = 'https://api.giphy.com/v1/gifs/search';
+
+    async function searchGiphyClips(query, limit = 20) {
+        if (!query.trim()) return [];
+        updateStatus(`🌐 Searching web for "${query}"...`, 'loading');
+        try {
+            const url = `${GIPHY_ENDPOINT}?api_key=${GIPHY_API_KEY}&q=${encodeURIComponent(query)}&limit=${limit}&rating=pg`;
+            const res = await fetch(url);
+            const json = await res.json();
+            if (!json.data || json.data.length === 0) {
+                updateStatus('❌ No clips found. Try another word.', 'error');
+                return [];
+            }
+            updateStatus(`🎬 Found ${json.data.length} clips!`);
+            return json.data;
+        } catch (err) {
+            updateStatus('❌ Search failed. Check connection.', 'error');
+            return [];
+        }
+    }
+
+    function renderClips(gifs) {
+        const container = document.getElementById('clipsContainer');
+        container.innerHTML = '';
+        gifs.forEach(gif => {
+            const thumb = gif.images?.fixed_height_small?.url || gif.images?.fixed_height?.url;
+            if (!thumb) return;
+            
+            const div = document.createElement('div');
+            div.className = 'clip-item';
+            div.innerHTML = `<img src="${thumb}" alt="clip" loading="lazy">`;
+            div.onclick = () => {
+                const fullUrl = gif.images?.fixed_height?.url || gif.images?.original?.url;
+                loadImageFromUrl(fullUrl);
+                // Visual feedback for selection
+                document.querySelectorAll('.clip-item').forEach(el => el.classList.remove('active'));
+                div.classList.add('active');
+            };
+            container.appendChild(div);
+        });
+    }
+
+    async function performSearch() {
+        const query = document.getElementById('searchQuery').value.trim();
+        const clips = await searchGiphyClips(query);
+        renderClips(clips);
+    }
+
+    async function randomTrendingClip() {
+        const terms = ['neon', 'cyberpunk', 'vaporwave', 'abstract', 'space', 'glitch', 'retro'];
+        const term = terms[Math.floor(Math.random() * terms.length)];
+        const clips = await searchGiphyClips(term);
+        if (clips.length) {
+            const rand = clips[Math.floor(Math.random() * clips.length)];
+            loadImageFromUrl(rand.images?.fixed_height?.url || rand.images?.original?.url);
+        }
+    }
+
+    function handleFileUpload(file) {
+        if (!file?.type.startsWith('image/')) return;
+        updateStatus('📁 Uploading image...', 'loading');
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            const img = new Image();
+            img.onload = () => finalizeImageLoad(img);
+            img.src = e.target.result;
+        };
+        reader.readAsDataURL(file);
+    }
+
+    function downloadEditedImage() {
+        if (!currentImage) return;
+        const link = document.createElement('a');
+        link.download = 'fluxforge_edit.png';
+        const tempCanvas = document.createElement('canvas');
+        tempCanvas.width = currentImage.naturalWidth;
+        tempCanvas.height = currentImage.naturalHeight;
+        tempCanvas.getContext('2d').drawImage(currentImage, 0, 0);
+        link.href = tempCanvas.toDataURL('image/png');
+        link.click();
+        updateStatus('⬇️ Image saved successfully!');
+    }
+
+    // --- EVENT BINDING ---
+    document.getElementById('fileUpload').onchange = (e) => handleFileUpload(e.target.files[0]);
+    document.getElementById('autoEditBtn').onclick = applyAutoEditToCurrent;
+    document.getElementById('resetBtn').onclick = resetToOriginal;
+    document.getElementById('downloadBtn').onclick = downloadEditedImage;
+    document.getElementById('searchForm').onsubmit = (e) => { e.preventDefault(); performSearch(); };
+    document.getElementById('randomClipBtn').onclick = randomTrendingClip;
+
+    window.onresize = drawCurrentImageOnCanvas;
+
+    // --- INIT ---
+    const startImg = new Image();
+    startImg.src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 400 300'%3E%3Crect width='400' height='300' fill='%230f1720'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' fill='%233b82f6' font-size='16' font-family='sans-serif' font-weight='bold'%3EFLUXFORGE READY%3C/text%3E%3C/svg%3E";
+    startImg.onload = () => finalizeImageLoad(startImg);
+</script>
+</body>
+</html>
